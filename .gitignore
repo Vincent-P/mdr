@@ -1,0 +1,4 @@
+build/
+initramfs/
+
+*.o
