@@ -1,21 +1,23 @@
 CC=gcc
 
-OBJS=test.o
+OBJS=src/main.o src/util.o libdrm/build/libdrm.a
 BIN=drm_test
 
 DIR := ${CURDIR}
 
 INITRAMFS=build/initramfs.cpio.gz
-
 BZIMAGE=build/linux/arch/x86_64/boot/bzImage
+
 kernel:
 	mkdir -p build/linux
 	make -C linux O=$(DIR)/build/linux allnoconfig
 	cp linux.config build/linux/.config
 	make -C build/linux -j8
 
-$(BIN): $(OBJS)
-	$(CC) -static $(OBJS) -o $(BIN)
+libdrm:
+	cp libdrm.meson.build libdrm/meson.build
+	cd libdrm && meson build
+	cd libdrm/build && ninja
 
 initramfs:
 	rm -rf initramfs
@@ -28,6 +30,9 @@ initramfs:
 
 	cp $(BIN) initramfs/bin
 	cd initramfs && find -print0 | cpio -0oH newc | gzip -9 > ../$(INITRAMFS)
+
+$(BIN): $(OBJS)
+	$(CC) -static $(OBJS) -o $(BIN)
 
 qemu:
 	qemu-system-x86_64 \

@@ -1,6 +1,6 @@
 [submodule "linux"]
 	path = linux
 	url = git@github.com:torvalds/linux
-[submodule "busybox"]
-	path = busybox
-	url = git@github.com:mirror/busybox
+[submodule "libdrm"]
+	path = libdrm
+	url = https://gitlab.freedesktop.org/mesa/drm.git
