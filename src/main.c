@@ -135,9 +135,9 @@ error_dumb:
 int main(void)
 {
 	/* We just take the first GPU that exists. */
-	int drm_fd = open("/dev/dri/card0", O_RDWR | O_NONBLOCK);
+	int drm_fd = open("/dev/dri/card1", O_RDWR | O_NONBLOCK);
 	if (drm_fd < 0) {
-		perror("/dev/dri/card0");
+		perror("/dev/dri/card1");
 		return 1;
 	}
 

@@ -1,4 +1,5 @@
 CC=gcc
+CFLAGS=-I/usr/include/libdrm 
 
 OBJS=src/main.o src/util.o libdrm/build/libdrm.a
 BIN=drm_test
