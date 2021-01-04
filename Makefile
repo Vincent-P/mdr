@@ -1,7 +1,7 @@
 CC=gcc
-CFLAGS=-I/usr/include/libdrm 
+CFLAGS=-I./libdrm/include/drm
 
-OBJS=src/main.o src/util.o libdrm/build/libdrm.a
+OBJS=src/main.o src/util.o src/draw.o libdrm/build/libdrm.a
 BIN=drm_test
 
 DIR := ${CURDIR}
@@ -15,7 +15,7 @@ libdrm:
 	cd libdrm/build && ninja
 
 $(BIN): $(OBJS)
-	$(CC) -static $(OBJS) -o $(BIN)
+	$(CC) -static $(OBJS) -lm -o $(BIN)
 
 qemu:
 	qemu-system-x86_64 \

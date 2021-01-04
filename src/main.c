@@ -12,36 +12,7 @@
 #include <xf86drmMode.h>
 
 #include "util.h"
-
-struct dumb_framebuffer {
-    uint32_t id;     // DRM object ID
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-    uint32_t handle; // driver-specific handle
-    uint64_t size;   // size of mapping
-
-    uint8_t *data;   // mmapped data we can write to
-};
-
-struct connector {
-    uint32_t id;
-    char name[16];
-    bool connected;
-
-    drmModeCrtc *saved;
-
-    uint32_t crtc_id;
-    drmModeModeInfo mode;
-
-    uint32_t width;
-    uint32_t height;
-    uint32_t rate;
-
-    struct dumb_framebuffer fb;
-
-    struct connector *next;
-};
+#include "draw.h"
 
 static uint32_t find_crtc(int drm_fd, drmModeRes *res, drmModeConnector *conn,
         uint32_t *taken_crtcs)
@@ -227,40 +198,8 @@ cleanup:
 
     drmModeFreeResources(res);
 
-    // Draw some colours for 5 seconds
-    uint8_t colour[4] = { 0x00, 0x00, 0xff, 0x00 }; // B G R X
-    int inc = 1, dec = 2;
-    for (int i = 0; i < 60 * 5; ++i) {
-        colour[inc] += 15;
-        colour[dec] -= 15;
-
-        if (colour[dec] == 0) {
-            dec = inc;
-            inc = (inc + 2) % 3;
-        }
-
-        for (struct connector *conn = conn_list; conn; conn = conn->next) {
-            if (!conn->connected)
-                continue;
-
-            struct dumb_framebuffer *fb = &conn->fb;
-
-            for (uint32_t y = 0; y < fb->height; ++y) {
-                uint8_t *row = fb->data + fb->stride * y;
-
-                for (uint32_t x = 0; x < fb->width; ++x) {
-                    row[x * 4 + 0] = colour[0];
-                    row[x * 4 + 1] = colour[1];
-                    row[x * 4 + 2] = colour[2];
-                    row[x * 4 + 3] = colour[3];
-                }
-            }
-        }
-
-        // Should give 60 FPS
-        struct timespec ts = { .tv_nsec = 16666667 };
-        nanosleep(&ts, NULL);
-    }
+    //draw_fb_coulours(conn_list);
+    draw_fb_image(conn_list);
 
     // Cleanup
     struct connector *conn = conn_list;

@@ -1,9 +1,5 @@
 #include "util.h"
 
-#include <stdint.h>
-#include <xf86drm.h>
-#include <xf86drmMode.h>
-
 /*
  * Get the human-readable string from a DRM connector type.
  * This is compatible with Weston's connector naming.
