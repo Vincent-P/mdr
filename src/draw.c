@@ -1,6 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 
 #include <time.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "stb_image.h"
@@ -50,39 +52,56 @@ void draw_fb_coulours(struct connector *conn_list)
 
 void draw_fb_image(struct connector *conn_list)
 {
-    int img_width, img_height, channels;
-    unsigned char *img = stbi_load("sky.jpg", &img_width, &img_height, &channels, 3);
-
-    for (struct connector *conn = conn_list; conn; conn = conn->next)
+    size_t slide_nb = 0;
+    while (1)
     {
-        if (!conn->connected)
-            continue;
+        int img_width, img_height, channels;
 
-        struct dumb_framebuffer *fb = &conn->fb;
+        char filename[12];
+        sprintf(filename, "NSE-%d.jpg", slide_nb);
+        if (access(filename, F_OK) != 0)
+            return draw_fb_coulours(conn_list);
 
-        for (uint32_t y = 0; y < fb->height; ++y)
+        unsigned char *img = stbi_load(filename, &img_width, &img_height, &channels, 3);
+
+        for (struct connector *conn = conn_list; conn; conn = conn->next)
         {
-            uint8_t *row = fb->data + fb->stride * y;
+            if (!conn->connected)
+                continue;
 
-            for (uint32_t x = 0; x < fb->width; ++x)
+            struct dumb_framebuffer *fb = &conn->fb;
+
+            for (uint32_t y = 0; y < fb->height; ++y)
             {
-                uint8_t img_x = x * img_width / fb->width;
-                uint8_t img_y = y * img_height / fb->height;
-                printf("imgx : %d, img_y: %d\n", img_x, img_y);
-                printf("x : %d, y: %d\n", x, y);
-                unsigned char *pixel_offset = img + (x + img_width * y) * 3;
+                uint8_t *row = fb->data + fb->stride * y;
 
-                // B G R X
-                row[x * 4 + 0] = pixel_offset[2];
-                row[x * 4 + 1] = pixel_offset[1];
-                row[x * 4 + 2] = pixel_offset[0];
-                row[x * 4 + 3] = 0xFF;
+                for (uint32_t x = 0; x < fb->width; ++x)
+                {
+                    size_t img_x = x * ((double)img_width / fb->width);
+                    size_t img_y = y * ((double)img_height / fb->height);
 
-                // FIXME: SEGV here... Maybe wrong x/y handling
+                    unsigned char *pixel_offset = img + (img_x + img_width * img_y) * 3;
+
+                    row[x * 4 + 0] = pixel_offset[2]; // B
+                    row[x * 4 + 1] = pixel_offset[1]; // G
+                    row[x * 4 + 2] = pixel_offset[0]; // R
+                    row[x * 4 + 3] = 0xFF;
+                }
             }
         }
+
+        char command = getchar();
+        switch (command)
+        {
+        case 'q': // Quit
+            return draw_fb_coulours(conn_list);
+        case 'p': // Previous
+            slide_nb--;
+            break;
+        case 'n': // Next
+        default:
+            slide_nb++;
+            break;
+        }
     }
-    // Wait 10 sec  
-    struct timespec ts = {.tv_sec = 10, .tv_nsec = 0};
-    nanosleep(&ts, NULL);
 }

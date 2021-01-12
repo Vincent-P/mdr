@@ -6,24 +6,15 @@ BIN=drm_test
 
 DIR := ${CURDIR}
 
-INITRAMFS=build/initramfs.cpio.gz
-BZIMAGE=build/linux/arch/x86_64/boot/bzImage
+$(BIN): libdrm $(OBJS)
+	$(CC) -static $(OBJS) -lm -o $(BIN)
 
 libdrm:
 	cp libdrm.meson.build libdrm/meson.build
 	cd libdrm && meson build
 	cd libdrm/build && ninja
 
-$(BIN): $(OBJS)
-	$(CC) -static $(OBJS) -lm -o $(BIN)
-
-qemu:
-	qemu-system-x86_64 \
-	    -kernel $(BZIMAGE) \
-	    -initrd $(INITRAMFS) \
-	    -append "init=/bin/sh"
-
 clean:
-	$(RM) -r build initramfs $(BIN) $(OBJS)
+	$(RM) -r $(BIN) $(OBJS)
 
 all: drm_test
