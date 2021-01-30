@@ -9,10 +9,10 @@
 
 void draw_fb_coulours(struct connector *conn_list)
 {
-    // Draw some colours for 5 seconds
+    // Draw some colours for ~3 seconds
     uint8_t colour[4] = {0x00, 0x00, 0xff, 0x00}; // B G R X
     int inc = 1, dec = 2;
-    for (int i = 0; i < 60 * 5; ++i)
+    for (int i = 0; i < 60 * 3; ++i)
     {
         colour[inc] += 15;
         colour[dec] -= 15;
@@ -58,9 +58,11 @@ void draw_fb_image(struct connector *conn_list)
         int img_width, img_height, channels;
 
         char filename[12];
-        sprintf(filename, "NSE-%d.jpg", slide_nb);
-        if (access(filename, F_OK) != 0)
-            return draw_fb_coulours(conn_list);
+        sprintf(filename, "slides/NSE-%d.jpg", slide_nb);
+        if (access(filename, F_OK) != 0) {
+            printf("End of slides !");
+            return;
+        }
 
         unsigned char *img = stbi_load(filename, &img_width, &img_height, &channels, 3);
 
@@ -89,12 +91,19 @@ void draw_fb_image(struct connector *conn_list)
                 }
             }
         }
-
-        char command = getchar();
+        char command;
+        do
+        {
+            command = getchar();
+        } while (command == '\n');
+        
         switch (command)
         {
+        case 'd': // draw colors
+            draw_fb_coulours(conn_list);
+            break;
         case 'q': // Quit
-            return draw_fb_coulours(conn_list);
+            return;
         case 'p': // Previous
             slide_nb--;
             break;
