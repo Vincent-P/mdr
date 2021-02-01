@@ -31,7 +31,9 @@ struct connector {
     uint32_t height;
     uint32_t rate;
 
-    struct dumb_framebuffer fb;
+    struct dumb_framebuffer fb[2];
+    struct dumb_framebuffer *front;
+    struct dumb_framebuffer *back;
 
     struct connector *next;
 };

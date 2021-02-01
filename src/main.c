@@ -103,6 +103,14 @@ error_dumb:
     return false;
 }
 
+static void destroy_fb(int drm_fd, struct dumb_framebuffer *fb)
+{
+	munmap(fb->data, fb->size);
+	drmModeRmFB(drm_fd, fb->id);
+	struct drm_mode_destroy_dumb destroy = { .handle = fb->handle };
+	drmIoctl(drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+}
+
 int main(void)
 {
     /* We just take the first GPU that exists. */
@@ -175,18 +183,29 @@ int main(void)
         printf("  Using mode %"PRIu32"x%"PRIu32"@%"PRIu32"\n",
                 conn->width, conn->height, conn->rate);
 
-        if (!create_fb(drm_fd, conn->width, conn->height, &conn->fb)) {
-            conn->connected = false;
-            goto cleanup;
-        }
+	if (!create_fb(drm_fd, conn->width, conn->height, &conn->fb[0])) {
+		conn->connected = false;
+		goto cleanup;
+	}
 
-        printf("  Created frambuffer with ID %"PRIu32"\n", conn->fb.id);
+	printf("  Created frambuffer with ID %"PRIu32"\n", conn->fb[0].id);
+
+	if (!create_fb(drm_fd, conn->width, conn->height, &conn->fb[1])) {
+		destroy_fb(drm_fd, &conn->fb[0]);
+		conn->connected = false;
+		goto cleanup;
+	}
+
+	printf("  Created frambuffer with ID %"PRIu32"\n", conn->fb[1].id);
+
+	conn->front = &conn->fb[0];
+	conn->back = &conn->fb[1];
 
         // Save the previous CRTC configuration
         conn->saved = drmModeGetCrtc(drm_fd, conn->crtc_id);
 
         // Perform the modeset
-        int ret = drmModeSetCrtc(drm_fd, conn->crtc_id, conn->fb.id, 0, 0,
+        int ret = drmModeSetCrtc(drm_fd, conn->crtc_id, conn->front->id, 0, 0,
                 &conn->id, 1, &conn->mode);
         if (ret < 0) {
             perror("drmModeSetCrtc");
@@ -199,17 +218,15 @@ cleanup:
     drmModeFreeResources(res);
 
     //draw_fb_coulours(conn_list);
-    draw_fb_image(conn_list);
+    draw_fb_image(drm_fd, conn_list);
 
     // Cleanup
     struct connector *conn = conn_list;
     while (conn) {
         if (conn->connected) {
             // Cleanup framebuffer
-            munmap(conn->fb.data, conn->fb.size);
-            drmModeRmFB(drm_fd, conn->fb.id);
-            struct drm_mode_destroy_dumb destroy = { .handle = conn->fb.handle };
-            drmIoctl(drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+		destroy_fb(drm_fd, &conn->fb[0]);
+		destroy_fb(drm_fd, &conn->fb[1]);
 
             // Restore the old CRTC
             drmModeCrtc *crtc = conn->saved;

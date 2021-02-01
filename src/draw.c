@@ -7,7 +7,7 @@
 #include "util.h"
 #include "stb_image.h"
 
-void draw_fb_coulours(struct connector *conn_list)
+void draw_fb_coulours(int drm_fd, struct connector *conn_list)
 {
     // Draw some colours for ~3 seconds
     uint8_t colour[4] = {0x00, 0x00, 0xff, 0x00}; // B G R X
@@ -28,7 +28,7 @@ void draw_fb_coulours(struct connector *conn_list)
             if (!conn->connected)
                 continue;
 
-            struct dumb_framebuffer *fb = &conn->fb;
+            struct dumb_framebuffer *fb = conn->back;
 
             for (uint32_t y = 0; y < fb->height; ++y)
             {
@@ -42,7 +42,14 @@ void draw_fb_coulours(struct connector *conn_list)
                     row[x * 4 + 3] = colour[3];
                 }
             }
-        }
+
+	    drmModeSetCrtc(drm_fd, conn->crtc_id, fb->id, 0, 0,
+			    &conn->id, 1, &conn->mode);
+
+	    // Swap buffers
+	    conn->back = conn->front;
+	    conn->front = fb;
+	}
 
         // Should give 60 FPS
         struct timespec ts = {.tv_nsec = 16666667};
@@ -50,7 +57,7 @@ void draw_fb_coulours(struct connector *conn_list)
     }
 }
 
-void draw_fb_image(struct connector *conn_list)
+void draw_fb_image(int drm_fd, struct connector *conn_list)
 {
     size_t slide_nb = 0;
     while (1)
@@ -71,7 +78,7 @@ void draw_fb_image(struct connector *conn_list)
             if (!conn->connected)
                 continue;
 
-            struct dumb_framebuffer *fb = &conn->fb;
+            struct dumb_framebuffer *fb = conn->back;
 
             for (uint32_t y = 0; y < fb->height; ++y)
             {
@@ -90,17 +97,24 @@ void draw_fb_image(struct connector *conn_list)
                     row[x * 4 + 3] = 0xFF;
                 }
             }
+
+	    drmModeSetCrtc(drm_fd, conn->crtc_id, fb->id, 0, 0,
+			    &conn->id, 1, &conn->mode);
+
+	    // Swap buffers
+	    conn->back = conn->front;
+	    conn->front = fb;
         }
         char command;
         do
         {
             command = getchar();
         } while (command == '\n');
-        
+ 
         switch (command)
         {
         case 'd': // draw colors
-            draw_fb_coulours(conn_list);
+            draw_fb_coulours(drm_fd, conn_list);
             break;
         case 'q': // Quit
             return;
